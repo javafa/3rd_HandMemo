@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
         color.setOnCheckedChangeListener(checkColorListener);
 
         // 두께 선택
-        stroke = (SeekBar) findViewById(seekBar);
+        stroke = (SeekBar) findViewById(R.id.seekBar);
         stroke.setProgress(10);
         stroke.setOnSeekBarChangeListener(thickChangeListener);
 
@@ -110,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /*
-        리스너
+        컬러 리스너
      */
     RadioGroup.OnCheckedChangeListener checkColorListener = new RadioGroup.OnCheckedChangeListener() {
         @Override
@@ -139,7 +139,9 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
-
+    /*
+        선굵기 리스너
+     */
     SeekBar.OnSeekBarChangeListener thickChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
