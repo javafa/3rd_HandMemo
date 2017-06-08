@@ -11,7 +11,6 @@ import android.graphics.PorterDuffXfermode;
 import android.os.Bundle;
 import android.support.annotation.IdRes;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -192,6 +191,10 @@ public class MainActivity extends AppCompatActivity {
             paint.setStrokeCap(Paint.Cap.ROUND);
             paint.setXfermode(null);
         }
+        /*
+            지워지는 효과를 위해서 XferMode 를 사용한다.
+            new PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+         */
         // 지우개 설정
         private void setErase(){
             erase = new Paint();
@@ -213,21 +216,20 @@ public class MainActivity extends AppCompatActivity {
         private void createPath(){
             if(newBrush) { // 브러쉬가 변경되었을 때만 Path를 생성해준다.
                 current_path = new Path();
-                newBrush = false; // 브러쉬를
                 current_brush.addPath(current_path);
                 brushes.add(current_brush);
-                Log.e("Brush","Add Brush===================="+current_brush);
-                Log.i("Brush","color===================="+current_brush.color);
-                Log.i("Brush","path===================="+current_brush.path);
-                Log.i("Brush","stroke===================="+current_brush.stroke);
-                Log.i("Brush","erase===================="+current_brush.erase);
+
+                newBrush = false;  // Path가 생성되면 브러쉬에 path가 적용되었다고 알려준다.
             }
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+
+            // xFerMode 에서 투명값을 적용하기 위해 LayerType 을 설정해준다
             setLayerType(LAYER_TYPE_HARDWARE, null);
+
             for(Brush brush : brushes) {
                 // 브러쉬에서 속성값을 꺼내서 Paint 에 반영한다.
                 // 지우개 설정
