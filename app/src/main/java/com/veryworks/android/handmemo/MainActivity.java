@@ -82,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 1. 보드를 새로 생성한다.
+        // 1. 그림판을 새로 생성한다.
         board = new Board(getBaseContext());
         // 2. 생성된 보드를 화면에 세팅한다.
         layout.addView(board);
@@ -92,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
 
     /*
         컬러와 두께는 조절 할 때마다 새로운 브러쉬를 생성하여 그림판에 담는다.
+        * 사용하지 않은 브러쉬는 그냥 버려진다 *
      */
     // 컬러 옵션값 조절
     private void setBrushColor(int colorType){
@@ -158,9 +159,10 @@ public class MainActivity extends AppCompatActivity {
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             for(Brush brush : brushes) {
-                // 브러쉬에서 속성값과 Path를 꺼내서 그려준다.
+                // 브러쉬에서 속성값을 꺼내서 Paint 에 반영한다.
                 paint.setStrokeWidth(brush.stroke);
                 paint.setColor(brush.color);
+                // 속성값이 반영된 Paint 와 Path를 화면에 그려준다.
                 canvas.drawPath(brush.path, paint);
             }
         }
