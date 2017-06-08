@@ -8,12 +8,11 @@ import android.graphics.Path;
 import android.os.Bundle;
 import android.support.annotation.IdRes;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.RadioGroup;
-import android.widget.Toast;
+import android.widget.SeekBar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +21,11 @@ public class MainActivity extends AppCompatActivity {
 
     FrameLayout layout;
     RadioGroup color;
+    SeekBar stroke;
 
     Board board;
-    Paint current_brush; // 현재 세팅된 브러쉬
+    int opt_brush_color = Color.BLACK; // 브러쉬 색상 기본값
+    float opt_brush_width = 10f;        // 브러쉬 두께 기본값 1
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,22 +33,49 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
         layout = (FrameLayout) findViewById(R.id.layout);
+        // 색상선택
         color = (RadioGroup) findViewById(R.id.color);
-
         color.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup group, @IdRes int checkedId) {
                 switch (checkedId){
+                    case R.id.rdBlack:
+                        setBrushColor(Color.BLACK);
+                        break;
                     case R.id.rdBlue:
-                        setBrush(Color.BLUE);
+                        setBrushColor(Color.BLUE);
                         break;
                     case R.id.rdGreen:
-                        setBrush(Color.GREEN);
+                        setBrushColor(Color.GREEN);
                         break;
                     case R.id.rdRed:
-                        setBrush(Color.RED);
+                        setBrushColor(Color.RED);
+                        break;
+                    case R.id.rdWhite:
+                        setBrushColor(Color.WHITE);
                         break;
                 }
+            }
+        });
+
+        // 두께 선택
+        stroke = (SeekBar) findViewById(R.id.seekBar);
+        stroke.setProgress(10);
+        stroke.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                opt_brush_width = progress + 1; // seekbar 가 0부터 시작하므로 1을 더해준다.
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            // 터치가 종료되었을 때만 값을 세팅해준다.
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                setBrushStroke(opt_brush_width);
             }
         });
 
@@ -58,52 +86,82 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(board);
 
         // 3. 기본 브러쉬 세팅
-        setBrush(Color.BLUE);
+        setBrush();
     }
 
-    private void setBrush(int ColorType){
-        // 2. 붓을 만들어서 보드에 담는다
-        Paint paint = new Paint();
-        paint.setColor(ColorType);
+    private void setBrushColor(int colorType){
+        opt_brush_color = colorType;
+        setBrush();
+    }
 
-        // 선을 채우지 않고 굵기를 지정
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setAntiAlias(true);
-        paint.setStrokeJoin(Paint.Join.ROUND);
-        paint.setStrokeCap(Paint.Cap.ROUND);
-        paint.setDither(true);
+    private void setBrushStroke(float width){
+        opt_brush_width = width;
+        setBrush();
+    }
 
-        // seekbar 에서 처리
-        paint.setStrokeWidth(10);
-        board.setPaint(paint);
+    // 보드에 설정된 브러쉬를 담는다
+    private void setBrush(){
+        Brush brush = new Brush();
+        brush.color = opt_brush_color;
+        brush.stroke = opt_brush_width;
+        board.setBrush(brush);
     }
 
     class Brush {
-        Paint paint;
         Path path;
+        int color;
+        float stroke;
+
+        public void addPath(Path path){
+            this.path = path;
+        }
     }
 
     class Board extends View {
         Paint paint;
-        List<Brush> brushes = new ArrayList<>();
-
+        List<Brush> brushes;
+        Brush current_brush;
         Path current_path;
-
+        boolean newBrush = true;
 
         public Board(Context context) {
             super(context);
-            //path = new Path();
+            setPaint();
+            brushes = new ArrayList<>();
         }
 
-        public void setPaint(Paint paint){
-            this.paint = paint;
+        public void setBrush(Brush brush) {
+            current_brush = brush;
+            newBrush = true;
+        }
+
+        private void setPaint(){
+            // Paint 의 기본속성만 적용해 두고, color 와 두께는 Brush에서 가져다가 그린다.
+            paint = new Paint();
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setAntiAlias(true);
+            paint.setStrokeJoin(Paint.Join.ROUND);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setDither(true);
+        }
+
+        private void createPath(){
+            if(newBrush) { // 브러쉬가 변경되었을 때만 Path를 생성해준다.
+                current_path = new Path();
+                newBrush = false; // 브러쉬를
+                current_brush.addPath(current_path);
+                brushes.add(current_brush);
+            }
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             for(Brush brush : brushes) {
-                canvas.drawPath(brush.path, brush.paint);
+                // 브러쉬에서 속성값과 Path를 꺼내서 그려준다.
+                paint.setStrokeWidth(brush.stroke);
+                paint.setColor(brush.color);
+                canvas.drawPath(brush.path, paint);
             }
         }
 
@@ -112,32 +170,17 @@ public class MainActivity extends AppCompatActivity {
             // 내가 터치한 좌표를 꺼낸다
             float x = event.getX();
             float y = event.getY();
-            switch (event.getAction()){
-                // 터치가 시작되면 Path 를 생성하고
-                // List 에 담아둔다.
-                case MotionEvent.ACTION_DOWN :
-                    // 새로운 붓을 생성 - path 와 paint 를 포함한다.
-                    Brush brush = new Brush();
-                    // 가. 패스 생성
-                    current_path = new Path();
-                    // 나. 생성한 패스와 현재 페인트를 브러쉬에 담는다.
-                    brush.path = current_path;
-                    brush.paint = paint;
-                    // 다. 완성된 브러쉬를 저장소에 담는다.
-                    brushes.add(brush);
 
-                    Log.e("LOG","onTouchEvent=================down");
+            switch (event.getAction()){
+                // 터치가 시작되면 Path 를 생성하고 현재 지정된 브러쉬와 함께 저장소에 담아둔다.
+                case MotionEvent.ACTION_DOWN :
+                    createPath();
                     current_path.moveTo(x,y); // 이전점과 현재점 사이를 그리지 않고 이동한다.
                     break;
                 case MotionEvent.ACTION_MOVE :
-                    Log.e("LOG","onTouchEvent==================move");
                     current_path.lineTo(x,y); // 바로 이전점과 현재점사이에 줄을 그어준다.
                     break;
-                case MotionEvent.ACTION_POINTER_UP:
-                    Toast.makeText(getContext(), "언제찍히니?", Toast.LENGTH_SHORT).show();
-                    break;
                 case MotionEvent.ACTION_UP :
-                    current_path.lineTo(x,y);
                     break;
             }
 
@@ -148,5 +191,7 @@ public class MainActivity extends AppCompatActivity {
             // 즉, 드래그시 onTouchEvent 가 호출되지 않는다
             return true;
         }
+
+
     }
 }
