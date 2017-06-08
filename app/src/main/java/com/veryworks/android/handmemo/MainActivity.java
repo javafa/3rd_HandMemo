@@ -6,9 +6,12 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.os.Bundle;
 import android.support.annotation.IdRes;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -28,8 +31,14 @@ public class MainActivity extends AppCompatActivity {
     Board board;                       // 그림판
     ImageView imageView;               // 캡쳐한 이미지를 썸네일로 화면에 표시
 
+    // 그리기 모드 설정
+    final static int MODE_DRAW = 100;
+    final static int MODE_ERASE = 200;
+
     int opt_brush_color = Color.BLACK; // 브러쉬 색상 기본값
     float opt_brush_width = 10f;       // 브러쉬 두께 기본값 1
+    int mode = MODE_DRAW;
+
     /* 브러쉬는 값을 조절할때 마다 그림판에 새로 생성됨 */
 
     // 캡쳐한 이미지를 저장하는 변수
@@ -49,19 +58,24 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(RadioGroup group, @IdRes int checkedId) {
                 switch (checkedId){
                     case R.id.rdBlack:
+                        mode = MODE_DRAW;
                         setBrushColor(Color.BLACK);
                         break;
                     case R.id.rdBlue:
+                        mode = MODE_DRAW;
                         setBrushColor(Color.BLUE);
                         break;
                     case R.id.rdGreen:
+                        mode = MODE_DRAW;
                         setBrushColor(Color.GREEN);
                         break;
                     case R.id.rdRed:
+                        mode = MODE_DRAW;
                         setBrushColor(Color.RED);
                         break;
                     case R.id.rdWhite:
-                        setBrushColor(Color.WHITE);
+                        mode = MODE_ERASE;
+                        setBrushColor(Color.TRANSPARENT);
                         break;
                 }
             }
@@ -131,11 +145,21 @@ public class MainActivity extends AppCompatActivity {
         setBrush();
     }
 
+
     // 현재 설정된 옵션값을 사용하여 브러쉬를 새로 생성하고 그림판에 담는다.
     private void setBrush(){
         Brush brush = new Brush();
         brush.color = opt_brush_color;
         brush.stroke = opt_brush_width;
+        switch (mode){
+            case MODE_DRAW:
+                brush.erase = false;
+                break;
+            case MODE_ERASE:
+                brush.erase = true;
+                break;
+        }
+
         board.setBrush(brush);
     }
 
@@ -144,6 +168,7 @@ public class MainActivity extends AppCompatActivity {
      */
     class Board extends View {
         Paint paint;
+        Paint erase;
         List<Brush> brushes;
         Brush current_brush;
         Path current_path;
@@ -154,6 +179,7 @@ public class MainActivity extends AppCompatActivity {
         public Board(Context context) {
             super(context);
             setPaint();
+            setErase();
             brushes = new ArrayList<>();
         }
         // 처음 한번만 기본 페인트 속성을 설정해둔다.
@@ -164,13 +190,25 @@ public class MainActivity extends AppCompatActivity {
             paint.setAntiAlias(true);
             paint.setStrokeJoin(Paint.Join.ROUND);
             paint.setStrokeCap(Paint.Cap.ROUND);
-            paint.setDither(true);
+            paint.setXfermode(null);
         }
+        // 지우개 설정
+        private void setErase(){
+            erase = new Paint();
+            erase.setColor(Color.TRANSPARENT);
+            erase.setStyle(Paint.Style.STROKE);
+            erase.setAntiAlias(true);
+            erase.setStrokeJoin(Paint.Join.ROUND);
+            erase.setStrokeCap(Paint.Cap.ROUND);
+            erase.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+        }
+
         // 브러쉬를 새로 생성한다.
         public void setBrush(Brush brush) {
             current_brush = brush;
             newBrush = true;
         }
+
         // Path를 새로 생성한다.
         private void createPath(){
             if(newBrush) { // 브러쉬가 변경되었을 때만 Path를 생성해준다.
@@ -178,18 +216,31 @@ public class MainActivity extends AppCompatActivity {
                 newBrush = false; // 브러쉬를
                 current_brush.addPath(current_path);
                 brushes.add(current_brush);
+                Log.e("Brush","Add Brush===================="+current_brush);
+                Log.i("Brush","color===================="+current_brush.color);
+                Log.i("Brush","path===================="+current_brush.path);
+                Log.i("Brush","stroke===================="+current_brush.stroke);
+                Log.i("Brush","erase===================="+current_brush.erase);
             }
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            setLayerType(LAYER_TYPE_HARDWARE, null);
             for(Brush brush : brushes) {
                 // 브러쉬에서 속성값을 꺼내서 Paint 에 반영한다.
-                paint.setStrokeWidth(brush.stroke);
-                paint.setColor(brush.color);
-                // 속성값이 반영된 Paint 와 Path를 화면에 그려준다.
-                canvas.drawPath(brush.path, paint);
+                // 지우개 설정
+                if(brush.erase) {
+                    erase.setStrokeWidth(brush.stroke);
+                    canvas.drawPath(brush.path, erase);
+                // 그리기 설정
+                }else{
+                    //setLayerType(LAYER_TYPE_NONE, paint);
+                    paint.setStrokeWidth(brush.stroke);
+                    paint.setColor(brush.color);
+                    canvas.drawPath(brush.path, paint);
+                }
             }
         }
 
@@ -229,6 +280,9 @@ public class MainActivity extends AppCompatActivity {
         Path path;      // 브러쉬로 그리는 경로를 같이 담아둔다
         int color;
         float stroke;
+
+        // 지우개 설정값 추가
+        boolean erase = false;
 
         public void addPath(Path path){
             this.path = path;
