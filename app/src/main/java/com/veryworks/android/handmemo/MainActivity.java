@@ -32,6 +32,9 @@ public class MainActivity extends AppCompatActivity {
     float opt_brush_width = 10f;       // 브러쉬 두께 기본값 1
     /* 브러쉬는 값을 조절할때 마다 그림판에 새로 생성됨 */
 
+    // 캡쳐한 이미지를 저장하는 변수
+    Bitmap captured = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -99,10 +102,9 @@ public class MainActivity extends AppCompatActivity {
                 // 다시 만들고
                 layout.buildDrawingCache();
                 // 레이아웃의 그려진 내용을 Bitmap 형태로 가져온다.
-                Bitmap capture = layout.getDrawingCache();
+                captured = layout.getDrawingCache();
                 // 캡쳐한 이미지를 썸네일에 보여준다.
-                imageView.setImageBitmap(capture);
-
+                imageView.setImageBitmap(captured);
             }
         });
 
