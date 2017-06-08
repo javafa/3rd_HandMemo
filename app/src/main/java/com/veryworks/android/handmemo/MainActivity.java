@@ -21,6 +21,8 @@ import android.widget.SeekBar;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.veryworks.android.handmemo.R.id.seekBar;
+
 public class MainActivity extends AppCompatActivity {
 
     FrameLayout layout;
@@ -30,13 +32,9 @@ public class MainActivity extends AppCompatActivity {
     Board board;                       // 그림판
     ImageView imageView;               // 캡쳐한 이미지를 썸네일로 화면에 표시
 
-    // 그리기 모드 설정
-    final static int MODE_DRAW = 100;
-    final static int MODE_ERASE = 200;
-
     int opt_brush_color = Color.BLACK; // 브러쉬 색상 기본값
     float opt_brush_width = 10f;       // 브러쉬 두께 기본값 1
-    int mode = MODE_DRAW;
+    int mode = Brush.MODE_DRAW;
 
     /* 브러쉬는 값을 조절할때 마다 그림판에 새로 생성됨 */
 
@@ -52,72 +50,21 @@ public class MainActivity extends AppCompatActivity {
         layout = (FrameLayout) findViewById(R.id.layout);
         // 색상선택
         color = (RadioGroup) findViewById(R.id.color);
-        color.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(RadioGroup group, @IdRes int checkedId) {
-                switch (checkedId){
-                    case R.id.rdBlack:
-                        mode = MODE_DRAW;
-                        setBrushColor(Color.BLACK);
-                        break;
-                    case R.id.rdBlue:
-                        mode = MODE_DRAW;
-                        setBrushColor(Color.BLUE);
-                        break;
-                    case R.id.rdGreen:
-                        mode = MODE_DRAW;
-                        setBrushColor(Color.GREEN);
-                        break;
-                    case R.id.rdRed:
-                        mode = MODE_DRAW;
-                        setBrushColor(Color.RED);
-                        break;
-                    case R.id.rdWhite:
-                        mode = MODE_ERASE;
-                        setBrushColor(Color.TRANSPARENT);
-                        break;
-                }
-            }
-        });
+        color.setOnCheckedChangeListener(checkColorListener);
 
         // 두께 선택
-        stroke = (SeekBar) findViewById(R.id.seekBar);
+        stroke = (SeekBar) findViewById(seekBar);
         stroke.setProgress(10);
-        stroke.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                opt_brush_width = progress + 1; // seekbar 가 0부터 시작하므로 1을 더해준다.
-            }
+        stroke.setOnSeekBarChangeListener(thickChangeListener);
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            // 터치가 종료되었을 때만 값을 세팅해준다.
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                setBrushStroke(opt_brush_width);
-            }
-        });
         // 썸네일 이미지뷰
         imageView = (ImageView) findViewById(R.id.imageView);
-        // 캡쳐를 할 뷰의 캐쉬를 사용한다.
-        //layout.setDrawingCacheEnabled(true);
-
 
         //저장버튼
         findViewById(R.id.btnSave).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 드로잉 캐쉬를 지워주고
-                layout.destroyDrawingCache();
-                // 다시 만들고
-                layout.buildDrawingCache();
-                // 레이아웃의 그려진 내용을 Bitmap 형태로 가져온다.
-                captured = layout.getDrawingCache();
-                // 캡쳐한 이미지를 썸네일에 보여준다.
-                imageView.setImageBitmap(captured);
+                captureBorad();
             }
         });
 
@@ -126,7 +73,18 @@ public class MainActivity extends AppCompatActivity {
         // 2. 생성된 보드를 화면에 세팅한다.
         layout.addView(board);
         // 3. 기본 브러쉬 세팅
-        setBrush();
+        setBrush(opt_brush_color, opt_brush_width, mode);
+    }
+
+    private void captureBorad(){
+        // 드로잉 캐쉬를 지워주고
+        layout.destroyDrawingCache();
+        // 다시 만들고
+        layout.buildDrawingCache();
+        // 레이아웃의 그려진 내용을 Bitmap 형태로 가져온다.
+        captured = layout.getDrawingCache();
+        // 캡쳐한 이미지를 썸네일에 보여준다.
+        imageView.setImageBitmap(captured);
     }
 
     /*
@@ -136,31 +94,69 @@ public class MainActivity extends AppCompatActivity {
     // 컬러 옵션값 조절
     private void setBrushColor(int colorType){
         opt_brush_color = colorType;
-        setBrush();
+        setBrush(opt_brush_color, opt_brush_width, mode);
     }
     // 두께 옵션값 조절
     private void setBrushStroke(float width){
         opt_brush_width = width;
-        setBrush();
+        setBrush(opt_brush_color, opt_brush_width, mode);
     }
 
 
     // 현재 설정된 옵션값을 사용하여 브러쉬를 새로 생성하고 그림판에 담는다.
-    private void setBrush(){
-        Brush brush = new Brush();
-        brush.color = opt_brush_color;
-        brush.stroke = opt_brush_width;
-        switch (mode){
-            case MODE_DRAW:
-                brush.erase = false;
-                break;
-            case MODE_ERASE:
-                brush.erase = true;
-                break;
-        }
-
+    private void setBrush(int color, float width, int mode){
+        Brush brush = Brush.newInstance(color, width, mode);
         board.setBrush(brush);
     }
+
+    /*
+        리스너
+     */
+    RadioGroup.OnCheckedChangeListener checkColorListener = new RadioGroup.OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(RadioGroup group, @IdRes int checkedId) {
+            switch (checkedId){
+                case R.id.rdBlack:
+                    mode = Brush.MODE_DRAW;
+                    setBrushColor(Color.BLACK);
+                    break;
+                case R.id.rdBlue:
+                    mode = Brush.MODE_DRAW;
+                    setBrushColor(Color.BLUE);
+                    break;
+                case R.id.rdGreen:
+                    mode = Brush.MODE_DRAW;
+                    setBrushColor(Color.GREEN);
+                    break;
+                case R.id.rdRed:
+                    mode = Brush.MODE_DRAW;
+                    setBrushColor(Color.RED);
+                    break;
+                case R.id.rdWhite:
+                    mode = Brush.MODE_ERASE;
+                    setBrushColor(Color.TRANSPARENT);
+                    break;
+            }
+        }
+    };
+
+    SeekBar.OnSeekBarChangeListener thickChangeListener = new SeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            opt_brush_width = progress + 1; // seekbar 가 0부터 시작하므로 1을 더해준다.
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+
+        }
+
+        // 터치가 종료되었을 때만 값을 세팅해준다.
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+            setBrushStroke(opt_brush_width);
+        }
+    };
 
     /*
         그림판
@@ -226,7 +222,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-
             // xFerMode 에서 투명값을 적용하기 위해 LayerType 을 설정해준다
             setLayerType(LAYER_TYPE_HARDWARE, null);
 
@@ -274,20 +269,39 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
     }
+}
 
-    /*
+/*
         브러쉬
      */
-    class Brush {
-        Path path;      // 브러쉬로 그리는 경로를 같이 담아둔다
-        int color;
-        float stroke;
+class Brush {
+    // 그리기 모드 설정
+    public final static int MODE_DRAW = 100;
+    public final static int MODE_ERASE = 200;
 
-        // 지우개 설정값 추가
-        boolean erase = false;
+    Path path;      // 브러쉬로 그리는 경로를 같이 담아둔다
+    int color;
+    float stroke;
 
-        public void addPath(Path path){
-            this.path = path;
+    // 지우개 설정값 추가
+    boolean erase = false;
+
+    public static Brush newInstance(int color, float width, int mode){
+        Brush brush = new Brush();
+        brush.color = color;
+        brush.stroke = width;
+        switch (mode){
+            case MODE_DRAW:
+                brush.erase = false;
+                break;
+            case MODE_ERASE:
+                brush.erase = true;
+                break;
         }
+        return brush;
+    }
+
+    public void addPath(Path path){
+        this.path = path;
     }
 }
