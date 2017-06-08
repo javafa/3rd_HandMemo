@@ -1,6 +1,7 @@
 package com.veryworks.android.handmemo;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -11,6 +12,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
 
@@ -24,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     SeekBar stroke;                    // 두께조절 옵션
 
     Board board;                       // 그림판
+    ImageView imageView;               // 캡쳐한 이미지를 썸네일로 화면에 표시
 
     int opt_brush_color = Color.BLACK; // 브러쉬 색상 기본값
     float opt_brush_width = 10f;       // 브러쉬 두께 기본값 1
@@ -79,6 +82,27 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 setBrushStroke(opt_brush_width);
+            }
+        });
+        // 썸네일 이미지뷰
+        imageView = (ImageView) findViewById(R.id.imageView);
+        // 캡쳐를 할 뷰의 캐쉬를 사용한다.
+        //layout.setDrawingCacheEnabled(true);
+
+
+        //저장버튼
+        findViewById(R.id.btnSave).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 드로잉 캐쉬를 지워주고
+                layout.destroyDrawingCache();
+                // 다시 만들고
+                layout.buildDrawingCache();
+                // 레이아웃의 그려진 내용을 Bitmap 형태로 가져온다.
+                Bitmap capture = layout.getDrawingCache();
+                // 캡쳐한 이미지를 썸네일에 보여준다.
+                imageView.setImageBitmap(capture);
+
             }
         });
 
